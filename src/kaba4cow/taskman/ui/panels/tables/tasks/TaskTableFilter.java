@@ -17,7 +17,7 @@ public class TaskTableFilter extends TableFilter<TaskTableObject> {
 
 	public TaskTableFilter() {
 		super();
-		setSortingTarget(SortingTarget.DESCRIPTION);
+		setSortingTarget(SortingTarget.TIME);
 		setSortingReversed(false);
 		description = "";
 		caseSensitive = false;

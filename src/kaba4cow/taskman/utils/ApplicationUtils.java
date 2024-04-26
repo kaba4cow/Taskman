@@ -6,7 +6,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.RandomAccessFile;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import kaba4cow.taskman.Application;
 import kaba4cow.taskman.utils.io.DataReader;
@@ -29,6 +32,10 @@ public final class ApplicationUtils {
 			directoryFile.mkdir();
 	}
 
+	public static RandomAccessFile getLockFile() throws IOException {
+		return new RandomAccessFile(new File(DIRECTORY + "lock"), "rw");
+	}
+
 	public static DataReader getDataReader(String filename) throws IOException {
 		return new DataReader(DIRECTORY + filename);
 	}
@@ -42,15 +49,19 @@ public final class ApplicationUtils {
 		return Toolkit.getDefaultToolkit().createImage(iconResource);
 	}
 
-	public static String readText(String filename) throws IOException {
-		URL url = Application.class.getResource(RESOURCES_LOCATION + filename);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(url.openConnection().getInputStream()));
-		StringBuilder text = new StringBuilder();
-		String line;
-		while ((line = reader.readLine()) != null)
-			text.append(line).append('\n');
-		reader.close();
-		return text.toString();
+	public static String[] readLines(String filename) {
+		try {
+			URL url = Application.class.getResource(RESOURCES_LOCATION + filename);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(url.openConnection().getInputStream()));
+			String line;
+			List<String> lines = new ArrayList<>();
+			while ((line = reader.readLine()) != null)
+				lines.add(line);
+			reader.close();
+			return lines.toArray(new String[lines.size()]);
+		} catch (IOException e) {
+			return new String[0];
+		}
 	}
 
 }

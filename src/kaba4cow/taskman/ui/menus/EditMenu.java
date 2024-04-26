@@ -19,24 +19,15 @@ public class EditMenu extends JMenu {
 	public EditMenu() {
 		super("Edit");
 
-		JMenu addTaskMenu = new JMenu("Add New Task");
-		{
-			JMenuItem[] addTaskItems = new JMenuItem[Task.Type.values().length];
-			for (int i = 0; i < addTaskItems.length; i++) {
-				Task.Type type = Task.Type.values()[i];
-				addTaskItems[i] = new JMenuItem(type.getName());
-				addTaskItems[i].addActionListener(new ActionListener() {
-					@Override
-					public void actionPerformed(ActionEvent event) {
-						Task task = Application.getTaskRepository().createTask(type,
-								Application.getCalendar().getDate());
-						new TaskEditDialog(task, task.getTimes().get(0), true);
-					}
-				});
-				addTaskMenu.add(addTaskItems[i]);
+		JMenuItem addTaskItem = new JMenuItem("Add New Task");
+		addTaskItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				Task task = Application.getTaskRepository().createTask(Application.getCalendar().getDate());
+				new TaskEditDialog(task, task.getTimes().get(0), true);
 			}
-		}
-		add(addTaskMenu);
+		});
+		add(addTaskItem);
 
 		JMenuItem addNoteItem = new JMenuItem("Add New Note");
 		addNoteItem.addActionListener(new ActionListener() {

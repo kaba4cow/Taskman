@@ -3,7 +3,6 @@ package kaba4cow.taskman.ui.panels.tables.todos;
 import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,8 +11,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 
-import kaba4cow.taskman.ApplicationSettings;
-import kaba4cow.taskman.ApplicationSettings.ApplicationSettingsListener;
 import kaba4cow.taskman.Application;
 import kaba4cow.taskman.repositories.Repository;
 import kaba4cow.taskman.repositories.RepositoryListener;
@@ -23,7 +20,7 @@ import kaba4cow.taskman.ui.panels.tables.UserTable;
 import kaba4cow.taskman.ui.panels.tables.UserTablePopupMenu;
 import kaba4cow.taskman.ui.panels.tables.renderers.CenteredRenderer;
 
-public class TodoTable extends JTable implements UserTable, ApplicationSettingsListener, RepositoryListener<Todo> {
+public class TodoTable extends JTable implements UserTable<Todo>, RepositoryListener<Todo> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -32,16 +29,12 @@ public class TodoTable extends JTable implements UserTable, ApplicationSettingsL
 
 	private final List<Todo> todoList;
 
-	private final UserTablePopupMenu popupMenu;
-
 	private final TodoTableFilter tableFilter;
 
 	public TodoTable(TodoTableFilter filter) {
 		super();
-		Application.getSettings().addListener(this);
 		Application.getTodoRepository().addListener(this);
 		todoList = new ArrayList<>();
-		popupMenu = new UserTablePopupMenu(this);
 		tableFilter = filter;
 		setModel(new TodoTableModel());
 		setCellSelectionEnabled(false);
@@ -53,19 +46,7 @@ public class TodoTable extends JTable implements UserTable, ApplicationSettingsL
 				getColumnModel().getColumn(i).setCellRenderer(alignedRenderer);
 			getColumnModel().getColumn(i).setPreferredWidth(COLUMN_WIDTHS[i]);
 		}
-		addMouseListener(new MouseAdapter() {
-			@Override
-			public void mousePressed(MouseEvent event) {
-				if (event.getButton() == MouseEvent.BUTTON3 && getSelectedTodo() != null)
-					popupMenu.show(TodoTable.this, event.getX(), event.getY());
-			}
-
-			@Override
-			public void mouseClicked(MouseEvent event) {
-				if (event.getButton() == MouseEvent.BUTTON1 && event.getClickCount() % 2 == 0)
-					editSelectedItem();
-			}
-		});
+		addMouseListener(new UserTablePopupMenu(this));
 		addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent event) {
@@ -76,8 +57,15 @@ public class TodoTable extends JTable implements UserTable, ApplicationSettingsL
 	}
 
 	@Override
-	public void onSettingsUpdated(ApplicationSettings settings) {
-		repaint();
+	public String getToolTipText(MouseEvent event) {
+		Point point = event.getPoint();
+		int column = columnAtPoint(point);
+		if (column != 2)
+			return null;
+		int row = rowAtPoint(point);
+		if (row >= 0 && row < getRowCount())
+			return todoList.get(row).getDescription();
+		return null;
 	}
 
 	@Override
@@ -98,36 +86,30 @@ public class TodoTable extends JTable implements UserTable, ApplicationSettingsL
 	}
 
 	@Override
-	public String getToolTipText(MouseEvent event) {
-		Point point = event.getPoint();
-		int column = columnAtPoint(point);
-		if (column != 2)
-			return null;
-		int row = rowAtPoint(point);
-		if (row >= 0 && row < getRowCount())
-			return todoList.get(row).getDescription();
-		return null;
+	public void addNewItem() {
+		new TodoEditDialog(Application.getTodoRepository().createTodo(), true);
 	}
 
 	@Override
 	public void editSelectedItem() {
-		Todo todo = getSelectedTodo();
+		Todo todo = getSelectedItem();
 		if (todo != null)
 			new TodoEditDialog(todo, false);
 	}
 
 	@Override
 	public void deleteSelectedItem() {
-		Todo todo = getSelectedTodo();
+		Todo todo = getSelectedItem();
 		if (todo != null) {
 			String message = String.format("Delete TODO \"%s\"?", todo.getDescription());
-			if (JOptionPane.showConfirmDialog(TodoTable.this, "Delete TODO?", message,
+			if (JOptionPane.showConfirmDialog(TodoTable.this, message, "Delete TODO",
 					JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION)
 				Application.getTodoRepository().deleteElement(todo);
 		}
 	}
 
-	private Todo getSelectedTodo() {
+	@Override
+	public Todo getSelectedItem() {
 		return getSelectedRow() == -1 ? null : todoList.get(getSelectedRow());
 	}
 

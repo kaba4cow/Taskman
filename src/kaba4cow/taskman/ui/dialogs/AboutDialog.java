@@ -6,7 +6,6 @@ import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -41,8 +40,10 @@ public class AboutDialog extends JDialog {
 		gbc.anchor = GridBagConstraints.CENTER;
 		gbc.fill = GridBagConstraints.NONE;
 
+		String[] aboutLines = ApplicationUtils.readLines("about");
+
 		JLabel titleLabel = new JLabel();
-		titleLabel.setText("Taskman - Desktop Task Manager Application");
+		titleLabel.setText(aboutLines[0]);
 		add(titleLabel, gbc);
 
 		JLabel iconLabel = new JLabel();
@@ -51,8 +52,8 @@ public class AboutDialog extends JDialog {
 		add(iconLabel, gbc);
 
 		JScrollPane licensePanel = new JScrollPane();
-		licensePanel.setBorder(BorderFactory.createTitledBorder(null, "GNU General Public License", TitledBorder.CENTER,
-				TitledBorder.TOP));
+		licensePanel.setBorder(
+				BorderFactory.createTitledBorder(null, aboutLines[1], TitledBorder.CENTER, TitledBorder.TOP));
 		licensePanel.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		licensePanel.setPreferredSize(new Dimension(300, 200));
 		{
@@ -63,10 +64,10 @@ public class AboutDialog extends JDialog {
 			SimpleAttributeSet center = new SimpleAttributeSet();
 			StyleConstants.setAlignment(center, StyleConstants.ALIGN_CENTER);
 			document.setParagraphAttributes(0, document.getLength(), center, false);
-			try {
-				licenseTextPane.setText(ApplicationUtils.readText("about/license"));
-			} catch (IOException e) {
-			}
+			StringBuilder licenseText = new StringBuilder();
+			for (int i = 2; i < aboutLines.length; i++)
+				licenseText.append(aboutLines[i]);
+			licenseTextPane.setText(licenseText.toString());
 			licenseTextPane.setCaretPosition(0);
 			licensePanel.setViewportView(licenseTextPane);
 		}

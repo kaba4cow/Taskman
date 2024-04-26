@@ -3,7 +3,6 @@ package kaba4cow.taskman.ui.panels.tables.tasks;
 import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -14,10 +13,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 
-import kaba4cow.taskman.ApplicationCalendar.ApplicationCalendarListener;
-import kaba4cow.taskman.ApplicationSettings.ApplicationSettingsListener;
 import kaba4cow.taskman.Application;
+import kaba4cow.taskman.ApplicationCalendar.ApplicationCalendarListener;
 import kaba4cow.taskman.ApplicationSettings;
+import kaba4cow.taskman.ApplicationSettings.ApplicationSettingsListener;
 import kaba4cow.taskman.repositories.Repository;
 import kaba4cow.taskman.repositories.RepositoryListener;
 import kaba4cow.taskman.repositories.task.Task;
@@ -28,8 +27,8 @@ import kaba4cow.taskman.ui.panels.tables.renderers.CenteredRenderer;
 import kaba4cow.taskman.ui.panels.tables.renderers.ColoredRenderer;
 import kaba4cow.taskman.utils.DateUtils;
 
-public class TaskTable extends JTable
-		implements UserTable, ApplicationSettingsListener, ApplicationCalendarListener, RepositoryListener<Task> {
+public class TaskTable extends JTable implements UserTable<TaskTableObject>, ApplicationSettingsListener,
+		ApplicationCalendarListener, RepositoryListener<Task> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -37,8 +36,6 @@ public class TaskTable extends JTable
 	private static final int[] COLUMN_WIDTHS = { 20, 80, 300 };
 
 	private final List<TaskTableObject> taskList;
-
-	private final UserTablePopupMenu popupMenu;
 
 	private final TaskTableFilter tableFilter;
 
@@ -48,7 +45,6 @@ public class TaskTable extends JTable
 		Application.getCalendar().addListener(this);
 		Application.getTaskRepository().addListener(this);
 		taskList = new ArrayList<>();
-		popupMenu = new UserTablePopupMenu(this);
 		tableFilter = filter;
 		setModel(new TaskTableModel());
 		setCellSelectionEnabled(false);
@@ -63,19 +59,7 @@ public class TaskTable extends JTable
 				getColumnModel().getColumn(i).setCellRenderer(centeredRenderer);
 			getColumnModel().getColumn(i).setPreferredWidth(COLUMN_WIDTHS[i]);
 		}
-		addMouseListener(new MouseAdapter() {
-			@Override
-			public void mousePressed(MouseEvent event) {
-				if (event.getButton() == MouseEvent.BUTTON3 && getSelectedTask() != null)
-					popupMenu.show(TaskTable.this, event.getX(), event.getY());
-			}
-
-			@Override
-			public void mouseClicked(MouseEvent event) {
-				if (event.getButton() == MouseEvent.BUTTON1 && event.getClickCount() % 2 == 0)
-					editSelectedItem();
-			}
-		});
+		addMouseListener(new UserTablePopupMenu(this));
 		addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent event) {
@@ -115,8 +99,7 @@ public class TaskTable extends JTable
 	@Override
 	public void updateTable() {
 		taskList.clear();
-		List<Task> tasks = Application.getTaskRepository()
-				.getTasksAtDate(Application.getCalendar().getDate());
+		List<Task> tasks = Application.getTaskRepository().getTasksAtDate(Application.getCalendar().getDate());
 		for (Task task : tasks) {
 			List<LocalTime> taskTimes = task.getTimes();
 			for (LocalTime time : taskTimes) {
@@ -131,15 +114,21 @@ public class TaskTable extends JTable
 	}
 
 	@Override
+	public void addNewItem() {
+		Task task = Application.getTaskRepository().createTask(Application.getCalendar().getDate());
+		new TaskEditDialog(task, task.getTimes().get(0), true);
+	}
+
+	@Override
 	public void editSelectedItem() {
-		TaskTableObject task = getSelectedTask();
+		TaskTableObject task = getSelectedItem();
 		if (task != null)
 			new TaskEditDialog(task.task, task.time, false);
 	}
 
 	@Override
 	public void deleteSelectedItem() {
-		TaskTableObject task = getSelectedTask();
+		TaskTableObject task = getSelectedItem();
 		if (task != null) {
 			String message = String.format("Delete task \"%s\" at %s?", task.task.getDescription(),
 					DateUtils.formatTime(task.time));
@@ -149,7 +138,8 @@ public class TaskTable extends JTable
 		}
 	}
 
-	private TaskTableObject getSelectedTask() {
+	@Override
+	public TaskTableObject getSelectedItem() {
 		return getSelectedRow() == -1 ? null : taskList.get(getSelectedRow());
 	}
 

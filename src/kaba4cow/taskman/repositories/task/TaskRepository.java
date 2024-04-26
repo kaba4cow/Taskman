@@ -17,22 +17,12 @@ public class TaskRepository extends Repository<Task> {
 		super();
 	}
 
-	public Task createTask(Task.Type type, LocalDate date) {
+	public Task createTask(LocalDate date) {
 		Task task = new Task();
-		task.setDescription("New " + type.getName());
+		task.setDescription("New Task");
 		task.addTime(LocalTime.of(12, 0));
 		task.setDate(date);
-		switch (type) {
-		case DAILY:
-			task.setIntervals(0, 0, 0, 1);
-			break;
-		case EVENT:
-			task.setIntervals(0, 0, 0, 0);
-			break;
-		case REPEATING:
-			task.setIntervals(0, 0, 1, 0);
-			break;
-		}
+		task.setIntervals(0, 0, 0, 1);
 		createElement(task);
 		return task;
 	}

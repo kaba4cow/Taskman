@@ -17,7 +17,7 @@ public class NoteTableFilter extends TableFilter<Note> {
 
 	public NoteTableFilter() {
 		super();
-		setSortingTarget(SortingTarget.DESCRIPTION);
+		setSortingTarget(SortingTarget.DATE);
 		setSortingReversed(false);
 		description = "";
 		caseSensitive = false;

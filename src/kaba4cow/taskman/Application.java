@@ -1,8 +1,10 @@
 package kaba4cow.taskman;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.channels.FileLock;
 
 import javax.swing.JFrame;
 
@@ -13,12 +15,13 @@ import kaba4cow.taskman.repositories.task.TaskRepository;
 import kaba4cow.taskman.repositories.todo.TodoRepository;
 import kaba4cow.taskman.ui.ApplicationWindow;
 import kaba4cow.taskman.ui.SplashScreen;
+import kaba4cow.taskman.utils.ApplicationUtils;
 
 public class Application {
 
-	private static final String TITLE = "Taskman";
+	private static final String applicationTitle = "Taskman";
 
-	private static Application instance;
+	private static final int listeningPort = 57010;
 
 	private static final ApplicationSettings settings = new ApplicationSettings();
 	private static final ApplicationCalendar calendar = new ApplicationCalendar();
@@ -26,25 +29,22 @@ public class Application {
 	private static final TaskRepository taskRepository = new TaskRepository();
 	private static final NoteRepository noteRepository = new NoteRepository();
 	private static final TodoRepository todoRepository = new TodoRepository();
-	private final ApplicationWindow applicationWindow;
 
-	private Application() {
-		applicationWindow = new ApplicationWindow();
-	}
+	private static ApplicationWindow applicationWindow;
 
 	public static void showWindow() {
-		instance.applicationWindow.setVisible(true);
-		instance.applicationWindow.setExtendedState(JFrame.NORMAL);
-		instance.applicationWindow.toFront();
-		instance.applicationWindow.requestFocus();
+		applicationWindow.setVisible(true);
+		applicationWindow.setExtendedState(JFrame.NORMAL);
+		applicationWindow.toFront();
+		applicationWindow.requestFocus();
 	}
 
 	public static void hideWindow() {
-		instance.applicationWindow.setVisible(false);
+		applicationWindow.setVisible(false);
 	}
 
 	public static boolean isOnScreen() {
-		return instance.applicationWindow.isFocused();
+		return applicationWindow.isFocused();
 	}
 
 	public static void closeProgram() {
@@ -53,7 +53,7 @@ public class Application {
 	}
 
 	public static String getTitle() {
-		return TITLE;
+		return applicationTitle;
 	}
 
 	public static ApplicationSettings getSettings() {
@@ -81,53 +81,74 @@ public class Application {
 	}
 
 	public static ApplicationWindow getApplicationWindow() {
-		return instance.applicationWindow;
+		return applicationWindow;
 	}
 
 	private static boolean canRunApplication() {
-		int port = 50710;
 		try {
-			new Socket("localhost", port).close();
-			return false;
-		} catch (IOException e1) {
-			try {
-				ServerSocket server = new ServerSocket(port);
-				new Thread("Instance Lock") {
-					@Override
-					public void run() {
-						while (true)
-							try {
-								server.accept().close();
-								showWindow();
-							} catch (IOException e) {
-							}
-					}
-				}.start();
+			RandomAccessFile file = ApplicationUtils.getLockFile();
+			FileLock lock = file.getChannel().tryLock();
+			if (lock != null) {
 				Runtime.getRuntime().addShutdownHook(new Thread() {
 					@Override
 					public void run() {
 						try {
-							server.close();
-						} catch (IOException e) {
+							lock.release();
+							file.close();
+						} catch (Exception e) {
 						}
 					}
 				});
-			} catch (IOException e2) {
-				e2.printStackTrace();
+				return true;
 			}
-			return true;
+		} catch (Exception e) {
+		}
+		try {
+			new Socket("localhost", listeningPort).close();
+		} catch (IOException e) {
+		}
+		return false;
+	}
+
+	private static void startServer() {
+		ServerSocket server;
+		try {
+			server = new ServerSocket(listeningPort);
+			new Thread("Server") {
+				@Override
+				public void run() {
+					while (true)
+						try {
+							server.accept().close();
+							showWindow();
+						} catch (IOException e) {
+						}
+				}
+			}.start();
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+				@Override
+				public void run() {
+					try {
+						server.close();
+					} catch (IOException e) {
+					}
+				}
+			});
+		} catch (IOException e) {
 		}
 	}
 
 	public static void main(String[] args) throws Exception {
 		if (canRunApplication()) {
 			SplashScreen splashScreen = new SplashScreen();
-			instance = new Application();
+			applicationWindow = new ApplicationWindow();
 			NotificationTray.init();
 			NotificationManager.init();
 			splashScreen.dispose();
 			showWindow();
-		}
+			startServer();
+		} else
+			System.exit(0);
 	}
 
 }
